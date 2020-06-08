@@ -30,53 +30,84 @@ class MarkovChain:
         transition : transition matrix of the Markov chain.
     '''
 
+
     def __init__(self, example_text, memory=1):
         ''' Initialise object
         '''
         self.example_text = example_text.split()
-        self.memory = memory # Memory property not yet properly implemented
+        self.memory = memory
 
         self.list_states() # Create a list of states that occur in example text
         self.calc_transition_matrix() # Create the transition matrix of the Markov chain
 
+
     def list_states(self):
-        ''' Creates an alphabetically ordered list of all states(=words)
+        ''' Creates an alphabetically ordered list of all states
         occuring in the example text.
         '''
-        states = [""] # The empty string represents the beginning of a sentence.
+        states = [] # The empty string represents the beginning of a sentence.
+        initial_states = [] # States that begin a sentence
+        words = []
+        word_to_index = {}
         state_to_index = {}
 
-        for state in self.example_text:
-            states = insert(states, state) # Adds the state to the list alphabetically
+        #
+        # Part where we list all unique words
+        #
+        for word in self.example_text:
+            words = insert(words, word)
+
+        for i, word in enumerate(words):
+            word_to_index[word] = i
+
+        #
+        # Part where we list all possible states
+        #
+        for i in range(len(self.example_text) - self.memory):
+            state = " ".join(self.example_text[i:i+self.memory])
+
+            if i == 0 or self.example_text[i-1][-1] == "." or \
+                self.example_text[i-1][-1] == "!" or self.example_text[i-1][-1] == "?":
+                initial_states = insert(initial_states, state)
+
+            # Add states to list in alphabetical order
+            states = insert(states, state)
 
         # Create the state_to_index dictionary
         # We use this dictionary to easily find corresponding indices to states
         for i, state in enumerate(states):
             state_to_index[state] = i
 
+        self.words = words
+        self.word_to_index = word_to_index
         self.states = states
         self.state_to_index = state_to_index
+        self.initial_states = initial_states
+
 
     def calc_transition_matrix(self):
-        ''' Calculate the transition matrix of the Markov Chain.
-        '''
-        freq_matrix = [[0 for state in self.states] for state in self.states]
+        ''' Calculate the transition matrix of the Markov Chain. '''
+        freq_matrix = [[0 for word in self.words] for state in self.states]
 
-        last_state_index = 0
-        for state in self.example_text:
+        #
+        # Calculate frequency matrix
+        #
+        for i in range(len(self.example_text) - self.memory):
+            # Get next state
+            state = " ".join(self.example_text[i:i+self.memory])
             state_index = self.state_to_index[state]
-            freq_matrix[last_state_index][state_index] += 1
 
-            # In case state is the last word in a sentence, we let its next
-            # state be the empty state.
-            if state[-1] == "." or state[-1] == "!" or state[-1] == "?":
-                freq_matrix[state_index][0] += 1
-                last_state_index = 0
-            else:
-                last_state_index = state_index
+            word = self.example_text[i + self.memory]
+            word_index = self.word_to_index[word]
 
+            # Increment frequency that word occurs after state
+            freq_matrix[state_index][word_index] += 1
+
+
+        #
         # Create transition matrix from the frequency table
-        transition = [[0 for state in self.states] for state in self.states]
+        #
+        transition = [[0 for word in self.words] for state in self.states]
         for row_i, row in enumerate(freq_matrix):
             S = sum(row)
 
@@ -86,6 +117,7 @@ class MarkovChain:
                 transition[row_i][col_i] = col / S
 
         self.transition = transition
+
 
     def next_state(self, i):
         ''' Randomly generate new state dependent on the last state i.
@@ -101,30 +133,35 @@ class MarkovChain:
         return len(distribution) - 1
 
 
+    def get_initial_state(self):
+        '''
+        '''
+        n = len(self.initial_states)
+        i = int(rnd.random() * n)
+
+        return self.state_to_index[self.initial_states[i]]
+
+
     def generate_text(self, n=1):
         ''' Generates text.
             n is the number of sentences that should be generated.
         '''
-        last_state = self.next_state(0)
-        chain = [last_state]
+        last_state = self.get_initial_state() # Randomly generate first state
+        chain = self.states[last_state].split()
 
         while n > 0:
-            last_state = self.next_state(last_state)
-            chain.append(last_state)
+            new_word = self.words[self.next_state(last_state)]
+            chain.append(new_word)
 
-            if last_state == 0:
+            last_state = self.state_to_index[" ".join(chain[-self.memory:])]
+
+            if new_word[-1] == "." or new_word[-1] == "!" or new_word[-1] == "?":
                 n -= 1
 
-
-        text = ""
-        for node in chain:
-            if node != 0:
-                text += self.states[node] + " "
-
-        return text[:-1]
+        return " ".join(chain)
 
 
 text = open("Trump_Speech.txt").read()
-trumpchain = MarkovChain(text)
+trumpchain = MarkovChain(text, 2)
 
-print(trumpchain.generate_text(4))
+print(trumpchain.generate_text(3))
