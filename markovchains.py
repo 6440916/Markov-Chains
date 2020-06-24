@@ -27,6 +27,8 @@ class MarkovChain:
                 and unique.
         state_to_index : dictionary from which we can easily find the index
                         of a certain state.
+        words : list of all unique words in de sample text.
+        word_to_index : dictionary which contains all indices of the list words
         transition : transition matrix of the Markov chain.
     '''
 
@@ -133,8 +135,8 @@ class MarkovChain:
         return len(distribution) - 1
 
 
-    def get_initial_state(self):
-        '''
+    def initial_state(self):
+        ''' Picks a random initial state.
         '''
         n = len(self.initial_states)
         i = int(rnd.random() * n)
@@ -146,7 +148,7 @@ class MarkovChain:
         ''' Generates text.
             n is the number of sentences that should be generated.
         '''
-        last_state = self.get_initial_state() # Randomly generate first state
+        last_state = self.initial_state() # Randomly generate first state
         chain = self.states[last_state].split()
 
         while n > 0:
@@ -161,7 +163,8 @@ class MarkovChain:
         return " ".join(chain)
 
 
-text = open("Trump_Speech.txt").read()
-trumpchain = MarkovChain(text, 2)
+if __name__ == "__main__":
+    text = open("Trump_Speech.txt").read()
+    chain = MarkovChain(text, 1)
 
-print(trumpchain.generate_text(3))
+    print(chain.generate_text(3))
